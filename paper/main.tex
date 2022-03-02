@@ -1,0 +1,409 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{calc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage[maxbibnames=3,backend=biber,style=ieee]{biblatex}
+\AtBeginBibliography{\footnotesize}
+\addbibresource{literature.bib}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage[group-separator={,}, group-minimum-digits={3}]{siunitx}
+\usepackage[colorlinks=true, urlcolor=blue,
+            linkcolor=blue, anchorcolor=blue]{hyperref}
+\usepackage{paralist}
+\usepackage[expansion,protrusion]{microtype}
+\usepackage{todonotes}
+\usepackage{numprint}
+\usepackage{tikz}
+\usetikzlibrary{calc, positioning, shapes.geometric}
+% For use in non-floating-capable envs
+
+\newcommand{\nop}[1]{{}} %  - to quickly comment out content
+
+\newcommand{\simulationLoC}{114, 527, 601}
+\newcommand{\optimizationLoC}{64, 176, 345, 458}
+\newcommand{\mlLoC}{170, 206, 248, 249, 1322, 1794}
+\newcommand{\averageLoC}{434}
+
+\newcommand{\LoCcolumnwidth}{90} % in pt
+\newcommand{\LoCunit}{\LoCcolumnwidth/1800}
+\newcommand{\dotposition}[1]{\LoCunit*#1}
+\newcommand{\logscale}[1]{log10{#1}}
+\newcommand{\random}{rand*1 pt}
+
+\tikzset{line/.style={very_lightgray,very thin}}
+\newcommand{\LoCgrid}{\tikz[remember picture, overlay]{%
+    \foreach \x in {0, 600,..., 1800}
+        \draw [line] (\dotposition{\x} + 3 pt, 9pt) -- (\dotposition{\x} + 3 pt, -3em) node[below, yshift=2pt, text=darkgray]{\tiny\x};
+    \draw[red, dashed, line width=1] (\dotposition{\averageLoC} + 3 pt, 9pt) -- (\dotposition{\averageLoC} + 3 pt, -2.9em);}}
+    
+\newcommand{\LoCdots}[3]{\tikz[%
+    dot/.style={circle,fill=#2,inner sep=1pt},
+    triangle/.style={isosceles triangle, isosceles triangle apex angle=60, rotate=90, fill=#2,inner sep=0.9pt},
+    diamond/.style={rectangle,rotate=45,fill=#2,inner sep=1.3pt}]{%
+	\coordinate (origin) at (0,0);
+	\coordinate (end) at (\LoCcolumnwidth pt, 0);
+	\node at (origin) []{};
+	\foreach \x in #1
+	    \node at (\dotposition{\x} pt, \random)[#3]{};}}
+
+
+\definecolor{very_lightgray}{RGB}{225, 225, 225}
+\definecolor{simulation_col}{RGB}{29, 171, 61}
+\definecolor{optimization_col}{RGB}{110, 55, 250}
+\definecolor{ml_col}{RGB}{212, 102, 43}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{language=Python, style=mystyle}
+\begin{document}
+
+\title{Peel $\mid$ Pile? Cross-Framework Portability\newline  of Quantum Software\\
+\thanks{MS, MF, and WM were supported by the German Federal Ministry of
+Education and Research (BMBF), funding program ``quantum technologies---from
+basic research to market'', grant number 13N15645. Our systematic search for open source quantum programming projects on GitHub using Google BigQuery, was supported by Google Cloud.}}
+
+\author{\IEEEauthorblockN{Manuel Schönberger, Maja Franz}
+\IEEEauthorblockA{
+\textit{Technical University of}\\
+\textit{Applied Sciences Regensburg,} Germany\\
+\href{mailto:manuel.schoenberger@othr.de}{manuel.schoenberger@othr.de},\\
+\href{mailto:maja.franz@st.othr.de}{maja.franz@st.othr.de}} 
+\and 
+\IEEEauthorblockN{Stefanie Scherzinger}
+\IEEEauthorblockA{\textit{Chair of Scalable Database Systems} \\
+\textit{University of Passau}\\
+Passau, Germany \\
+\href{mailto:stefanie.scherzinger@uni-passau.de}{stefanie.scherzinger@uni-passau.de}}
+\and
+\IEEEauthorblockN{Wolfgang Mauerer}
+\IEEEauthorblockA{\textit{Technical University of}\\
+\textit{Applied Sciences Regensburg}\\
+\textit{Siemens AG, Corporate Research}\\
+\href{mailto:wolfgang.mauerer@othr.de}{wolfgang.mauerer@othr.de}}
+}
+
+\maketitle
+
+\begin{abstract}
+In recent years, various vendors have made quantum software frameworks available. 
+Yet with vendor-specific frameworks, code portability seems at risk, especially in a field where 
+hardware and software libraries have not yet reached a consolidated state, and even foundational
+aspects of the technologies are still in flux.  Accordingly, the development of vendor-independent
+quantum programming languages and frameworks is often suggested. 
+%
+This follows the established architectural pattern of introducing additional levels of abstraction
+into software stacks, thereby \emph{piling on} layers of abstraction. Yet software architecture
+also provides seemingly less abstract alternatives, namely to focus on hardware-specific formulations
+of problems that \emph{peel off} unnecessary layers.
+%
+In this article, we quantitatively and experimentally explore these strategic alternatives, and
+compare popular quantum frameworks from the software implementation perspective.
+%
+We find that for several specific, yet generalisable problems, the mathematical formulation
+of the problem to be solved is not just sufficiently abstract and serves as precise description,
+but is likewise concrete enough to allow for deriving framework-specific implementations with
+little effort. Additionally, we argue, based on analysing dozens of existing quantum codes,
+that porting between frameworks is actually low-effort, since the quantum- and framework-specific
+portions are very manageable in terms of size, commonly in the order of mere hundreds of lines of code.
+Given the \emph{current} state-of-the-art in quantum programming practice,
+this leads us to argue in favour of \emph{peeling off} unnecessary abstraction levels. 
+
+\end{abstract}
+
+\section{Introduction}
+
+In recent years, academia (\emph{e.g.},~\cite{Mauerer:2005}) and vendors have made frameworks for
+developing quantum software available, such as IBM Qiskit~\cite{Qiskitdoc},
+Pennylane~\cite{bergholm2020pennylane}, TensorFlow Quantum (TFQ)~\cite{Broughton.06.03.2020}, and
+D-Wave Ocean~\cite{oceansdk}. Oftentimes, these vendors also provide access to quantum processing
+units (QPUs). Since the current implementations of quantum algorithms are inherently coupled to the
+framework used, the development of a vendor-independent quantum programming language as part of a
+hardware-independent quantum processing framework has been suggested~\cite{FrankLeymann.2020}. A
+high-level quantum programming language may moreover be beneficial from a quantum software
+engineering perspective~\cite{zhao2020quantum,Krueger:2020}. Some quantum frameworks enabling
+abstraction, to an
+extent, are already available, like QC Ware's Quasar library~\cite{quasar} and the Atos Quantum
+Learning Machine~\cite{atosqml}. Moreover, methods for automatically proposing suitable quantum
+hardware for specific problems, formulated in a vendor-independent language, have been
+proposed~\cite{FrankLeymann.2020, Weder.2021}. The idea of making quantum software development
+hardware-independent and thus \emph{piling on} new layers of abstraction, is particularly attractive,
+as both quantum hardware and software libraries are still evolving. More broadly, tools such as
+GitHub Copilot~\cite{githubcopilot} successfully demonstrate how a higher degree of abstraction
+increases developer efficiency: In Copilot, an AI engine proposes entire lines of code automatically.
+
+Since quantum software development is still at an early stage, the research community still lacks
+insights into the available systems and the specific properties that make them suitable for certain
+quantum algorithms. Much like  QPUs themselves, these properties are evolving. Developing a
+sufficiently accurate and future-proof automated selection process of quantum hardware is therefore
+difficult to accomplish, at the current stage. 
+
+Moreover, the actual benefits of further abstraction levels in quantum software development are still unclear: they strongly depend on the effort required for migrating existing implementations onto another framework. This effort needs to outweigh both the expense of creating an additional abstraction layer and the abstraction effort regarding existing implementations. Otherwise, the prospects for a vendor-independent programming language will be limited, as demonstrated by the lack of adoption of the programming language Ada, once developed with similar
+aspirations~\cite{ichbiah1979rationale}.
+
+We argue that we need to thoroughly understand the specific characteristics of the quantum frameworks. Previously, LaRose et al.~\cite{LaRose.2019} investigated four quantum frameworks and compared a variety of aspects, such as the available QPUs and library support. Moreover, a comparison framework for quantum frameworks was presented by Viez et al~\cite{Vietz.2021}. Yet we find the software implementation perspective underexplored.
+
+We need to gain an understanding whether \emph{piling on} new layers of
+abstraction is advisable, or whether we should rather focus our joint efforts on
+hardware-specific implementations and thus \emph{peel off} unnecessary layers
+instead. Accordingly, we systematically compare four popular quantum
+frameworks~\cite{OwenLockwood.2020, Chen.2020,
+Skolik.28.03.2021, franz22, Trummer.2016, Feld.2019, Khairy.2019}: (1) Qiskit, (2)
+Pennylane, (3) TFQ, which incorporates Google's Cirq, and (4) D-Wave Ocean. 
+
+\smallskip
+\noindent
+\textbf{Contributions.}
+Our contributions are as follows: 
+\begin{compactitem}
+    \item We size up the quantum-specific code for several hybrid quantum-classical algorithms, all implemented by third parties. Our key insight is that the solutions studied require less than two thousand lines of code for encoding the quantum-specific parts. The quantum-specific code is thus small and manageable, comparable in volume to small personal programming projects. 
+    \item  We compare the software development process given different development frameworks.
+    We focus on two specific and rather novel application cases, namely reinforcement learning and  multi-query optimisation in databases engines. While reformulating these problems to quantum algorithms is conceptually challenging, we again find that the actual implementation effort for all frameworks is very manageable,
+    to the point of straightforward.
+    \item We compare the portability of quantum software across frameworks. Specifically,
+    we assess how strongly an implementation is coupled to the underlying framework. While the
+    framework-specific implementation effort varies between applications, only small-scale code
+    portions are involved in general. This renders cross-framework porting a task that involves little effort.
+\end{compactitem}
+
+We then discuss the peel vs.\ pile trade-off given these results.
+
+\smallskip
+\noindent
+\textbf{Structure.}
+Chapter~\ref{promising_applications} introduces problem domains for which quantum computing is particularly promising, and investigates the code volume of the quantum-specific part of existing implementations. Chapter~\ref{sec:portability} studies cross-framework portability for two specific application use cases. Chapter~\ref{conclusion} concludes.
+
+\section{Dimensions of Hybrid QC applications}
+%\section{Promising Quantum Computing Applications}
+
+\label{promising_applications}
+
+We size up the quantum-specific code for realistic, hybrid quantum-classical algorithms by considering applications
+where quantum computing promises speedups.
+%
+The \emph{Quantum Application and Technology Consortium} (QuTAC) comprises ten multi-national companies from different sectors, in particular
+automotive, chemistry, insurance, and technology.
+The consortium identifies relevant
+application domains~\cite{Bayerstadler.2021}: optimisation, machine learning (ML),
+and simulation. 
+%The optimization problems mostly comprise traveling salesman, knapsack, satisfiability and sequencing problems. 
+
+\begin{table}[tb]
+	\centering
+	\caption{Quantum code volume of quantum-classical
+	applications (files importing a 
+	quantum framework library are considered quantum code). Dashed red line: Cross-domain average (\averageLoC).}\label{tab:relevance_appl_cases}
+	\begin{tabular}{lp{\LoCcolumnwidth pt}l}
+		\toprule
+		\textbf{Domain} & \textbf{Lines of Code (LoC)} & \textbf{References}\\
+		\midrule
+		Optimisation & \LoCgrid\LoCdots{\optimizationLoC}{optimization_col}{triangle} 
+		& \cite{Lucas.2014, Martonak.2004, Hogg.2003, Feld.2019, Gabor.2019, portfolioOpt, kruger2020quantum, sax2020approximate, antennaSel, maxCut} \\
+		%\hline
+		ML & \LoCdots{\mlLoC}{ml_col}{dot} 
+		& \cite{OwenLockwood.2020, OwenLockwood.2020_GH, Skolik.28.03.2021, Skolik_GH, Chen.2020, Chen.2020_GH, mitarai2018quantum, hellstern2021analysis, farhi2018classification} \\
+		%\hline
+		Simulation & \LoCdots{\simulationLoC}{simulation_col}{diamond}
+        & \cite{barison2020quantum, barison2020quantum_GH, copenhaver2021using_GH, copenhaver2021using} \\
+		\bottomrule
+	\end{tabular}
+	
+\end{table}
+
+Table~\ref{tab:relevance_appl_cases} references previous work and code repositories related to these
+problem domains. The material was collected by manually reviewing existing literature, but also by a
+keyword search on a current snapshot of open source projects on GitHub, using Google BigQuery. These
+and all further steps of our analysis are fully reproducible~\cite{Mauerer:2022} using our provided
+reproduction package\footnote{Zenodo: \url{https://doi.org/10.5281/zenodo.5898296}}. The table lists
+the total lines of code of all files within a project, where the files import some quantum framework
+library. As such, this is a generous over-approximation of the share of the quantum-specific code.
+Other possible metrics include code maintainability or readability. However, the former is hardly
+applicable for software with only several hundred lines of code, whereas the latter is hard to
+quantify. 
+
+Similarly to classical software, the lines of code metric (LoC) has been suggested as useful for evaluating the size of quantum software and the process~\cite{ramsauer:2019} and development effort~\cite{Zhao.2021}. Other metrics correlate with lines of code~\cite{mamun.2017}, rendering them a suitable proxy metric. In the applications analysed, we also
+found that the number of commits containing changes to quantum-related
+code correlates with the LoC metric.
+
+We observe that these numbers are small, which we attribute to the
+representation pattern for many of these problems, particularly optimisation problems: typically, they are reformulated as quadratic unconstrained binary optimisation (QUBO) problems~\cite{Lucas.2014, Martonak.2004, Hogg.2003, Feld.2019, Gabor.2019}, to leverage existing implementations of quantum algorithms and solvers. Consequently, the bulk of development time is actually spent on finding suitable reformulations (rather than implementing complex control flow paths). This suggests that for these problems, the number of framework-specific and quantum-related implementation steps might be limited, since they mostly consist of calling existing quantum subroutines. Similar observations can be made for machine learning and simulation problems.
+
+To verify or refute this indication, we analyse two specific and practically relevant problems representing two of the discussed domains in more detail. Specifically, we investigate implementation complexity and the quantum-specific steps.
+
+\section{Cross-framework portability}
+\label{sec:portability}
+
+We critically evaluate and compare the gate-based frameworks Qiskit, Pennylane, TFQ, and the quantum annealing framework D-Wave Ocean, regarding the software implementation process. For our analysis, we choose two specific application scenarios that are subject to current research: (A)~reinforcement learning~\cite{Chen.2020, OwenLockwood.2020, Skolik.28.03.2021, franz22} and (B)~multi-query optimisation~\cite{Trummer.2016}. Due to the restriction to QUBO problems, we do not consider the Ocean framework for RL. More specifically, for each implementation we evaluate its size (in terms of lines of code) and its complexity with respect to the available documentation and library support.
+Moreover, we investigate the framework-specific and quantum-related implementation steps, which determine how strongly the implementations are tied to the quantum frameworks. Based on our findings, we discuss the benefits a new abstraction layer may provide. 
+
+\def\picwidth{18cm}
+\def\picheight{9cm}
+\def\innerwidth{4.0cm}
+\def\hsep{0.2cm}
+\def\vsep{0.1cm}
+\input{code.tex}
+
+\begin{figure*}
+    \input{codefig.tex}\vspace*{-2em}
+    \caption{(Best viewed in colour.) Pseudocode capturing the essential structure
+    of quantum algorithms for reinforcement learning (top centre) and multi-query optimisation (bottom centre), and their concrete implementations in three frameworks (left: RL, right: MQO), together with approximate lines of code for quantum-specific components (Q:~\(\langle N\rangle\)), and classical (C:~\(\langle N\rangle\)) contributions (based on
+    a manual classification by the authors). The python code, although functional, is not meant to be read, but merely gives a sense of scale.
+    Regardless
+    of the framework, the concrete implementations are close in size to the abstract pseudo-code representation, indicating that further abstraction
+    layers or domain-specific quantum programming languages have very limited potential for additional reduction in size, and increase in expressivity.
+    We only show classical code that is directly interrelated with quantum code components in the figure.}
+    \label{fig:framework_comparison}
+\end{figure*}
+
+\subsection{Reinforcement Learning}
+Most reinforcement learning (RL) formulations centre around a Markov Decision Process (MDP)~\cite{Bellman1957}:
+An \emph{agent} interacts with an \textit{environment} to maximise a cumulative reward $G_t = \sum_{t'=t}^T \gamma^{t'} R_{t'}$
+until a terminal state $S_T$ is reached, with $R_{t'}$ being the reward at time step~$t'$ and a discount
+factor~$\gamma$~\cite{sutton2018}. We focus on Deep Q-Learning~\cite{WatkinsDayan92, mnih2013playing}, where
+the idea is to learn the optimal \textit{action-value function}, also referred to as \textit{Q-function}:
+$Q_*(s,a) = \max_\pi \mathbb{E} \left[G_t | S_t = s, A_t = a, \pi \right]$. It represents the
+return, or accumulative reward~$G_t$, expected when taking an action $a$ in the environment's state~$s$,
+then following a policy $\pi$ in future states. An optimal policy $\pi_*$ can be recovered by taking
+the action that maximises future \textit{Q-values}: $\pi_*(s) = \arg \max_{a} Q_*(s,a)$. In classical
+Deep Q-Learning, this is achieved by training a neural network to satisfy the 
+\textit{Bellman Optimality Equation}~\cite{Bellman1957} that relates the values of a state-action pair to the value of the next state:
+\begin{align}
+    Q_*(s,a) = \mathbb{E}\Big[R_t + \gamma \max_{a'} Q_*(S_{t+1}, a') \mid &S_t = s, \nonumber &A_t = a\Big]
+\end{align}
+
+In quantum-based RL, the neural network can be replaced by a \emph{variational quantum circuit}
+(VQC)~\cite{mitarai2018quantum, Chen.2020, Skolik.28.03.2021, OwenLockwood.2020}, parameterised by weights $\theta$.
+The algorithm sketched in Figure~\ref{fig:framework_comparison} (top centre) employs the Double Q-Learning
+approach as suggested in~\cite{van2016deep}, which calculates targets with a \textit{target network}
+or a \textit{target VQC} in the quantum domain, parameterised by~$\theta^-$.
+
+As a first step, we implemented classical RL with a neural network, using TensorFlow~\cite{tensorflow_developers_2021_5645375} and PyTorch~\cite{pytorch}. We chose these frameworks because Pennylane offers an interface for both, TFQ builds upon TensorFlow,
+and Qiskit provides a machine learning library based on PyTorch. Since common quantum Q-Learning
+algorithms~\cite{Chen.2020, Skolik.28.03.2021, OwenLockwood.2020} do not examine annealing approaches, we only consider
+gate-based frameworks.
+
+After confirming the correctness of our implementations, we replaced the classical neural network
+with a VQC based on standard framework patterns, in particular using python to represent
+a VQC for machine learning with trainable parameters. It essentially comprises three 
+code elements: (1)~the VQC definition, (2)~calculation and processing of Q-values, 
+and (3)~calculation of gradients in a quantum-classical back-propagation
+procedure~\cite{mitarai2018quantum, schuld2019evaluating}. All frameworks offer similar library
+classes for this purpose. In each case, we could easily isolate the quantum-based steps from the classical
+algorithm.
+
+As we discuss in Sec.~\ref{sec:lineup}, the framework-specific implementation 
+steps are almost interchangeable\footnote{We did observe major differences in run-time: Calculating
+gradients for one batch takes \numprint{47748} ms in Qiskit, \numprint{1212} ms in Pennylane,
+and \numprint{659} ms in TFQ; the differences substantially impact practical utility (measurements
+are averaged over 100 batches and conducted on the same device.)}.
+An abstraction layer at this level could be beneficial, since TFQ is coupled with TensorFlow,
+and Qiskit with PyTorch. Hence, it could ease porting between ML and quantum frameworks.
+
+\subsection{Multi Query Optimisation}
+Multi query optimisation (MQO) is a longstanding problem in database research.
+It seeks to determine a globally optimal set of execution plans for a batch of database queries, minimising the
+overall execution cost by reusing common subexpressions~\cite{DBLP:reference/db/Roy018}. The problem has been addressed on
+a D-Wave quantum annealer, based on a reformulation into a QUBO problem~\cite{Trummer.2016}. QUBO problems and their
+equivalent Ising formulations~\cite{Bian.2010} can also be solved on gate-based QPUs with variational
+hybrid quantum-classical algorithms~\cite{McClean.2016}, such as the quantum approximate optimisation
+algorithm (QAOA)~\cite{Farhi.2014}. We can solve MQO problems on gate-based
+frameworks~\cite{schoenberger2021quantumqueryopt, fankhauser2021multiple} and therefore on all considered quantum frameworks
+using the reformulation approach presented in Ref.~\cite{Trummer.2016}.
+
+We again discuss the implementation procedure for each framework. The Ocean implementation for D-Wave 
+is straightforward---it suffices to apply the QUBO reformulation proposed in~\cite{Trummer.2016}. Using
+framework-provided classes, we create a quadratic model that serves as input for all solvers.
+The Ocean implementation is the most compact among all frameworks.
+
+For gate-based frameworks, we use the same reformulation approach to solve the problem with QAOA. The algorithm is sketched in Figure~\ref{fig:framework_comparison} (bottom centre). Here, we first searched the available documentation and libraries for artefacts related to QAOA. We found that Qiskit offers a library that fully encapsulates all QAOA steps. Much like the Ocean implementation, Qiskit requires only a limited number of steps: We use the IBM DOcplex tool~\cite{docplex} to apply the QUBO transformation using mathematical expressions. We then use classes and methods provided by Qiskit to create a quadratic model based on the DOcplex model. Finally, we determine an optimal solution for the quadratic problem using a provided optimiser, which transforms the QUBO to an Ising model and which we configure to internally use the available QAOA solver. No explicit QAOA circuit specification is necessary for Qiskit.
+
+We did not find any comparable libraries for Pennylane and TFQ. However, for Pennylane, a library containing utility functions for QAOA (e.g., for applying the cost and mixer layers) exists, which simplifies the process of creating the QAOA circuit. In both cases, we create QAOA circuits by simply following demo code from the documentation. 
+
+The QAOA circuit consists of an alternating sequence of repeating cost and mixing operators, where the number of repetitions is given by a parameter $p$~\cite{Farhi.2014}. To create the cost Hamiltonian needed for the cost operators, we need the Ising coefficients of our problem formulation. Therefore, we base the Pennylane and TFQ implementations on our Qiskit implementation, which allows us to use available methods for converting QUBOs into an Ising model. As before, the framework-specific steps are few and simple: they consist of creating the operators and parameterised quantum circuits based on the Ising coefficients. The parameters are classically optimised in an outer loop (e.g., by gradient descent methods).
+
+We found weak framework coupling for all MQO implementations. Ocean and Qiskit
+mostly require QUBO transformation, and resulting models serve as input for the solvers offered by frameworks.
+The implementations for Qiskit, Pennylane, and TFQ are near-identical up to determining the QUBO model
+or the respective Ising coefficients. The remaining framework-specific steps for Pennylane and TFQ are largely independent
+of the concrete problem, and moreover straightforward to implement through the use of existing libraries and available
+documentation. The effort for porting the MQO implementation across frameworks
+is minor, and an additional abstraction layer at implementation level provides little benefit.
+
+\subsection{Application Scenario Lineup}
+\label{sec:lineup}
+
+
+Figure~\ref{fig:framework_comparison} shows the quantum-relevant code for the 
+use-cases in the gate-based frameworks. It allows for side-by-side comparison.
+In the centre, we show the abstract pseudo-code for RL and MQO.
+To the left and right, we show quantum-specific code for each framework
+(the python code is not meant to be readable, but merely to provide a sense of scale).
+
+The implementations are of limited LoC size,
+and well below multi-million LoC typically considered in software engineering~\cite{Bass:2012}.
+In fact, the quantum-specific python code ranges between just 8 and 58 lines of code.
+
+
+Most importantly, they are comparable in size to the mathematical pseudo-code
+representation. This suggests limited potential for further abstraction. Porting between
+frameworks is mostly a direct substitution of APIs without
+structural code changes, indicating that the expressivity is essentially optimal.
+
+
+\section{Discussion and conclusion}
+\label{conclusion}
+Programming quantum computers is, at the current state of technology, often perceived as a very low-level
+task, comparable to programming early-generation classical machines. We have studied potentials and limitations
+for extending the state-of-the-art with higher-level abstractions and device-independent presentation
+of quantum algorithms using two means: (a)~by learning from existing quantum programs, and (b)~by implementing
+two advanced use-cases for multiple, popular quantum programming frameworks, and judging similarities
+across frameworks, with an abstract pseudo-code representation.
+For RL, we isolated the quantum-specific implementation details from the classical algorithm. 
+For MQO, we used a QUBO reformulation applicable for all frameworks.
+
+In all cases, quantum-specific portions are small, and the level of abstraction is not much different
+between pseudo-code and all frameworks. We see no reason to assume much difference between the considered problems and others of similar size and problem domains, in this regard. All scenarios are orders of magnitude away from problem sizes 
+considered challenging in software architecture and engineering practice and research.
+
+Our findings suggest that in general, introducing new abstraction layers by crafting framework-independent
+programming languages holds limited promise.
+
+Still, our selected application cases represent problem domains which are considered promising candidates for
+quantum speedups. Other problems of these domains are usually solved with similar patterns and paradigms. For instance,
+optimisation problems are typically reformulated to leverage established quantum algorithms. This might change once
+new quantum algorithms and paradigms are discovered. However, progress related to quantum algorithms has been
+moderate---for instance, key algorithms like Grover search~\cite{Grover.1996} have been known for more than two
+decades. Therefore, the familiar quantum patterns and paradigms are likely to persist for the foreseeable future. 
+
+Ultimately, when deciding between piling on new abstraction layers or peeling off existing ones,
+our results suggest the latter.
+
+\printbibliography
+
+\end{document}

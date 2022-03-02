@@ -1,0 +1,330 @@
+\newlength\boxwidth\setlength{\boxwidth}{(\picwidth-\innerwidth)/2-\hsep}
+\newlength\boxheight\setlength{\boxheight}{(\picheight-\vsep-\vsep)/3}
+\algnewcommand{\LeftComment}[1]{\State \(\triangleright\) #1}
+\definecolor{qiskitcol}{RGB}{112,48,160}
+\definecolor{pennylanecol}{RGB}{112,173,71}
+\definecolor{tfqcol}{RGB}{255,192,0}
+
+\newcommand{\pwidth}{0.24\linewidth}
+\newcommand{\pchcorr}{\hspace*{-0.9em}}
+\newcommand{\algsize}{\fontsize{6.6}{7.6}\selectfont}
+\newcommand{\gendeepq}{\pchcorr\begin{minipage}{\pwidth}
+\renewcommand*\ttdefault{cmvtt} % Proportional typewriter font. How very cool.
+    % \begin{algorithm}
+%\label{alg:rl}
+\algsize\begin{algorithmic}
+    \LeftComment{\textbf{Quantum Deep Q-Learning}}%~\cite{mnih2013playing,van2016deep,OwenLockwood.2020}}
+    \State Init replay buf $\mathbb{D}$, (target) VQC $\theta^{(-)}$
+%\State Initialize VQC with weights $\theta$ 
+%\State Initialize target-VQC with weights $\theta^{-}$ 
+\For{$s\gets 0, \texttt{steps}$}
+    \State Sample $\mathbb{B}=$
+    \State \hspace*{2em}$(s_t, a_t, s_{t+1}, r_{t+1})\backslash\mathbb{D}$
+    \ForAll{$b_{i} \in \mathbb{B}$}
+        \LeftComment{Target}
+        \State $y_i \gets \gamma \max\limits_{a'} Q(s_{i+1}, a'; \theta^-)$ 
+        \State $q_i \gets Q(s_i, a_i; \theta)$ \Comment{Q-Value}
+    \EndFor 
+    \State $L(\theta) \gets (y - q)^2$ \Comment{Loss}
+    \State Update $\theta$ (param shift rule~\cite{mitarai2018quantum, schuld2019evaluating})
+    \If{$s\bmod{\texttt{update}} = 0$}
+    \State $\theta^{-} \gets \theta$
+    \EndIf 
+\EndFor 
+\end{algorithmic}
+%\end{algorithm}
+\end{minipage}}
+
+%\begin{algorithm}
+%\caption{Multi Query Optimization with QAOA}
+%\label{alg:mqo}
+
+\newcommand{\genqaoa}{\pchcorr\begin{minipage}{\pwidth}
+\renewcommand*\ttdefault{cmvtt}
+\algsize\begin{algorithmic}
+    \LeftComment{\textbf{Multi Query Optimization}}
+    \State Init MQO QUBO $qm$, circ.\ params $\beta$, $\gamma$
+\State $c_{\texttt{lin}} \texttt{,} c_{\texttt{qdr}} \gets \texttt{IsingCoeffs}(qm)$
+\State $hl \gets \texttt{\{\}}$
+\For{$k \gets 0, p$}
+    \State $hl \gets hl\frown\texttt{CostHam(}c_{\texttt{lin}}, c_{\texttt{qdr}}\texttt{)}$
+    \State $hl \gets hl\frown\texttt{MixerHam()}$
+\EndFor 
+\State $qc \gets \texttt{buildQCircuit(}hl, \beta, \gamma$ \texttt{)}
+\State Initialize classical optimizer $opt$
+\While{$\lnot$converged}
+    \State $\beta, \gamma \gets opt\texttt{.step(}qc, \beta, \gamma \texttt{)}$ 
+\EndWhile 
+\State $r \gets \texttt{sample(}qc, \beta, \gamma \texttt{)}$
+\end{algorithmic}\end{minipage}}
+
+\newcommand{\codefont}{\fontsize{3.5}{4}\selectfont}
+\lstset{language=python,basicstyle=\codefont\ttfamily,numbers=none, 
+  backgroundcolor={},framesep=0pt,framerule=0pt,xleftmargin=0pt,tabsize=1,
+  showtabs=true,showspaces=false}
+
+\newcommand{\lsttopcorr}{\vspace*{-0.75em}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Deep Q Learning %%%%%%%%%%%%%%%%%%%%%%%
+%% Qiskit
+\newsavebox\qiskitla\newsavebox\qiskitlb
+\begin{lrbox}{\qiskitla}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+# define circuit
+class VQC_Layer(Module):
+  def __init__(self, n_qubits, n_layers, shots, device):
+    self.circuit = QuantumCircuit(n_qubits)
+    # input part
+    for i, input in enumerate(input_params):
+      self.circuit.rx(input, i)
+    for i in range(n_layers):
+      self.generate_layer(weight_params[i*n_qubits*2 : (i+1)*n_qubits*2])
+    readout_op = ListOp([
+      ~StateFn(pauli_op_list([('ZZII', 1.0)])) @ StateFn(self.circuit),
+      ~StateFn(pauli_op_list([('IIZZ', 1.0)])) @ StateFn(self.circuit)])
+    qnn = OpflowQNN(readout_op,
+       input_params=input_params,
+       weight_params=weight_params,
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+\begin{lrbox}{\qiskitlb}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+       quantum_instance=qi,
+       gradient=Gradient()
+    self.qnn = TorchConnector(qnn, initial_weights=torch.Tensor(np.zeros(n_qubits*n_layers*2)))
+    
+  def generate_layer(self, params):
+    # variational part
+    for i in range(self.n_qubits):
+        self.circuit.ry(params[i*2], i)
+        self.circuit.rz(params[i*2+1], i)
+    # entangling part
+    for i in range(self.n_qubits):
+        self.circuit.cz(i, (i+1) % self.n_qubits)
+ 
+    # Q-value calculation
+  def forward(self, inputs):
+    return self.qnn(inputs)
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+
+%% Pennylane
+\newsavebox\pennyla\newsavebox\pennylb
+\begin{lrbox}{\pennyla}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+# define circuit and Q-value calculation
+@qml.qnode(device, wires=config.n_qubits), interface='tf', diff_method='parameter-shift')
+def circuit(inputs, weights):
+  # input part
+  for i in range(config.n_qubits):
+    qml.RX(inputs[i], wires=i)
+
+  for i in range(config.n_layers):
+    generate_layer(weights[i], config.n_qubits)
+  return [qml.expval(qml.PauliZ(0) @ qml.PauliZ(1)), qml.expval(qml.PauliZ(2) @ qml.PauliZ(3))]
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+\begin{lrbox}{\pennylb}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+def generate_layer(params, n_qubits): 
+  # variational part
+  for i in range(n_qubits):
+    qml.RY(params[i][0], wires=i)
+    qml.RZ(params[i][1], wires=i)
+  # entangling part
+  for i in range(n_qubits):
+    qml.CZ(wires=[i, (i+1) % n_qubits])
+
+# initialize Keras Layer
+VQC_Layer = qml.qnn.KerasLayer(
+  qnode=circuit,
+  weight_shapes={'weights': (config.n_layers, config.n_qubits, 2)},
+  weight_specs = {"weights": {"initializer": "Zeros"}},
+  output_dim=2,
+  name='VQC_Layer')
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+
+
+%% TensorflowQuantum
+\newsavebox\tqla\newsavebox\tqlb
+\begin{lrbox}{\tqla}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+# define circuit
+class VQC_Layer(keras.layers.Layer):
+def __init__(self, n_qubits, n_layers):
+  # ... definition of variables 
+  circuit = cirq.Circuit()
+  circuit.append([cirq.rx(inputs[i]).on(qubit) for i, qubit in enumerate(self.qubits)])
+  for i in range(n_layers):
+    circuit.append(
+      self.generate_layer(params[i*n_qubits*2 : (i+1)*n_qubits*2]))
+  readout_op = [
+    cirq.PauliString(cirq.Z(qubit) for qubit in self.qubits[:2]),
+    cirq.PauliString(cirq.Z(qubit) for qubit in self.qubits[2:])]
+  self.vqc = tfq.layers.ControlledPQC(circuit, readout_op, 
+    differentiator=ParameterShift())
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+\begin{lrbox}{\tqlb}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+def generate_layer(self, params):
+  circuit = cirq.Circuit()
+  # variational part
+  for i, qubit in enumerate(self.qubits):
+    circuit.append([
+      cirq.ry(params[i*2]).on(qubit),
+      cirq.rz(params[i*2+1]).on(qubit)])
+  # entangling part
+  for i in range(self.n_qubits):
+    circuit.append(cirq.CZ.on(self.qubits[i], 
+      self.qubits[(i+1) % self.n_qubits]))
+  return circuit
+
+# Q-value calculation
+def call(self, inputs):
+  # ... classical input processing
+  return self.vqc([tiled_up_circuits, joined_vars])
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Multi-Query Optimisation %%%%%%%%%%%%%%%%%%%%%%%
+%% Qiskit
+\newsavebox\qiskitra\newsavebox\qiskitrb
+\begin{lrbox}{\qiskitra}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+def construct_model(model,queries,
+                    costs,savings):
+  v = model.binary_var_list(len(costs))
+  epsilon = 0.25
+  wl= calculate_wl(costs, epsilon)
+  wm= calculate_wm(savings, wl)
+  El=model.sum(-1*(wl-costs[i])*v[i] \
+     for i in range(0, len(costs)))
+  Em=model.sum(model.sum(wm*v[i]*v[j] \
+     for (i,j) in itertools.combinations
+                  (queries[k], 2)) \
+     for k in queries.keys())
+  Es=model.sum(-s*v[i]*v[j] \
+     for ((i,j), s) in savings)
+  return(El + Em + Es)
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+\begin{lrbox}{\qiskitrb}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+def solve_with_QAOA(qubo):
+  qmeas=qiskit.algorithms.QAOA(
+    quantum_instance=Aer.get_backend('qasm_simulator'), 
+    initial_point=[0., 0.])
+  qaoa=MinimumEigenOptimizer(qaoa_meas)
+  qres=qaoa.solve(qubo)
+  return qres,qmeas.get_optimal_circuit()
+	
+def solve_MQO(queries, costs, savings):    
+  model=Model('docplex_model')
+  model.minimize(construct_model(
+      model, queries, costs, savings))
+  qubo=QuadraticProgram()
+  qubo.from_docplex(model)
+  result_QAOA, QAOA_circuit=solve_with_QAOA(qubo)
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+
+%% Pennylane
+\newsavebox\pennyra\newsavebox\pennyrb
+\begin{lrbox}{\pennyra}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+def get_ising_model(queries, costs,
+                    savings):
+  model = Model('docplex_model')
+  v = model.binary_var_list(len(costs))
+  epsilon = 0.25
+  wl = calculate_wl(costs, epsilon)
+  wm = calculate_wm(savings, wl)
+  El = model.sum(-1*(wl-costs[i])*v[i] \
+       for i in range(0, len(costs)))
+  Em = model.sum(model.sum(wm*v[i]*v[j] \
+       for (i,j) in itertools.combinations(
+          queries[k], 2)) for k in queries.keys())
+  Es = model.sum(-s*v[i]*v[j] \
+       for ((i,j), s) in savings)
+  model.minimize(El+Em+Es)  
+  qubo = translators.from_docplex_mp(model)
+  return qubo.to_ising()	
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+\begin{lrbox}{\pennyrb}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+def solve_MQO(queries, costs, savings, p=1):   
+  sing, offset = get_ising_model(
+                    queries, costs, savings)
+  wires = range(len(costs))
+  cham = create_cost_hamiltonian(linear, quadratic, offset)
+  mham = create_mixer_hamiltonian(wires)
+  dev = qml.device("default.qubit", wires=wires)
+  circuit = qml.QNode(cost_function, dev)   
+  params = get_initial_params(p)  
+  optimizer = qml.GradientDescentOptimizer()
+  steps = 200  
+  for i in range(steps):
+    params = optimizer.step(circuit, params,
+                wires=wires, depth=p,
+                cost_hamiltonian=cham,
+                mixer_hamiltonian=mham)
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+
+
+%% TensorflowQuantum
+\newsavebox\tqra\newsavebox\tqrb
+\begin{lrbox}{\tqra}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+def get_ising_model(queries,costs,savings):
+  model = Model('docplex_model')
+  v = model.binary_var_list(len(costs))
+  epsilon = 0.25
+  wl = calculate_wl(costs, epsilon)
+  wm = calculate_wm(savings, wl)
+  El = model.sum(-1*(wl-costs[i])*v[i] for i in range(0, len(costs)))
+  Em = model.sum(model.sum(wm*v[i]*v[j] \
+            for (i,j) in itertools.combinations(queries[k], 2)) 
+            for k in queries.keys())
+  Es = model.sum(-s*v[i]*v[j] for ((i,j), s) in savings)
+  model.minimize(El+Em+Es)  
+  qubo = translators.from_docplex_mp(model)
+  return qubo.to_ising()
+def solve_MQO(queries, costs, savings, p=1):
+  ising, offset = get_ising_model(queries, costs, savings)
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}
+\begin{lrbox}{\tqrb}
+\begin{minipage}{(\boxwidth-\hsep)/2}\lsttopcorr
+\begin{lstlisting}
+  coeffs = np.real(ising.primitive.coeffs)
+  pauli_array = ising.primitive.settings['data'].array
+  linear, quadratic = get_coefficients_from_Pauli_array(pauli_array, coeffs)
+  cirq_qubits = cirq.GridQubit.rect(1, len(costs))
+  # ... Init parameters and hamiltonians ...
+  qaoa_circuit = tfq.util.exponential(operators=hamiltonians,
+                          coefficients=qaoa_parameters)
+  hadamard_circuit = get_hadamard_circuit(cirq_qubits)
+  # ... Initialize Keras Model ...
+  model.add(tfq.layers.PQC(model_circuit,
+            model_readout, backend=cirq.Simulator()))
+  # ... Train the model ...
+\end{lstlisting}\vspace*{-1em}\end{minipage}
+\end{lrbox}

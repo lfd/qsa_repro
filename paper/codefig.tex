@@ -1,0 +1,106 @@
+  \begin{tikzpicture}
+    %\draw[help lines] (0,0) grid (\picwidth,\picheight);
+    % box left bottom left 
+    \node (blbl0) at (0, 0) {}; 
+    \node (blbl1) at (0, \boxheight+\vsep) {}; 
+    \node (blbl2) at (0, {2*(\boxheight+\vsep)}) {};
+    % box left top left 
+    \node (bltl0) at (0, \boxheight) {}; 
+    \node (bltl1) at (0, 2*\boxheight+\vsep) {}; 
+    \node (bltl2) at (0, {3*\boxheight+2*\vsep}) {};
+
+    % box right bottom left 
+    \node (brbl0) at (\boxwidth+\innerwidth+2*\hsep, 0) {}; 
+    \node (brbl1) at (\boxwidth+\innerwidth+2*\hsep, \boxheight+\vsep) {}; 
+    \node (brbl2) at (\boxwidth+\innerwidth+2*\hsep, {2*(\boxheight+\vsep)}) {};
+    % box right top left 
+    \node (brtl0) at (\boxwidth+\innerwidth+2*\hsep, \boxheight) {}; 
+    \node (brtl1) at (\boxwidth+\innerwidth+2*\hsep, 2*\boxheight+\vsep) {}; 
+    \node (brtl2) at (\boxwidth+\innerwidth+2*\hsep, {3*\boxheight+2*\vsep}) {};
+    % box right bottom right
+    \node (brbr0) at (\picwidth, 0) {}; 
+    \node (brbr1) at (\picwidth, \boxheight+\vsep) {}; 
+    \node (brbr2) at (\picwidth, {2*(\boxheight+\vsep)}) {};
+    % box right top right
+    \node (brtr0) at (\picwidth, \boxheight) {}; 
+    \node (brtr1) at (\picwidth, 2*\boxheight+\vsep) {}; 
+    \node (brtr2) at (\picwidth, {3*\boxheight+2*\vsep}) {};
+    
+    \tikzset{codebox/.style={thick,draw=#1}}
+    \draw[codebox=tfqcol] (blbl0) rectangle +(\boxwidth,\boxheight); 
+    \draw[codebox=pennylanecol] (blbl1) rectangle +(\boxwidth,\boxheight); 
+    \draw[codebox=qiskitcol] (blbl2) rectangle +(\boxwidth,\boxheight);
+    \draw[codebox=tfqcol] (brbl0) rectangle +(\boxwidth,\boxheight); 
+    \draw[codebox=pennylanecol] (brbl1) rectangle +(\boxwidth,\boxheight); 
+    \draw[codebox=qiskitcol] (brbl2) rectangle +(\boxwidth,\boxheight);
+
+   
+    \tikzset{algbox/.style={rectangle,draw=gray,ultra thin,fill=lightgray!20}}\
+    \node[anchor=north west,algbox] (deepq) at (\boxwidth+\vsep,\picheight) { \gendeepq{} };
+    \node[anchor=south west,algbox] (qaoa) at (\boxwidth+\vsep,0) { \genqaoa{} };
+    
+    % Arrow tips
+    \tikzset{algarrow/.style={draw=none, fill=lightgray!20, fill opacity=0.75}}
+    \tikzset{loclabel/.style={draw=none, fill=lightgray!20, fill opacity=0.75]}}
+    \tikzset{algarrowtip/.style={ultra thin,draw=gray}}
+    \filldraw[algarrow] (deepq.north west) -- ($(deepq.west) + (-5em,0)$) --
+                        (deepq.south west) -- cycle;
+    \draw[algarrowtip] (deepq.north west) -- ($(deepq.west) + (-5em,0)$) -- (deepq.south west) ;
+    
+    \filldraw[algarrow] (qaoa.north east) -- ($(qaoa.east) + (+5em,0)$) --
+                        (qaoa.south east) -- cycle;    
+    \draw[algarrowtip] (qaoa.north east) -- ($(qaoa.east) + (+5em,0)$) -- (qaoa.south east) ;
+                          
+    %% DeepQ
+    \node[anchor=north west] at (bltl2) { \usebox{\qiskitla} }; 
+    \node[anchor=north west] at ($(bltl2)+(\boxwidth/2-\hsep,0)$) { \usebox{\qiskitlb} }; 
+
+    \node[anchor=north west] at (bltl1) { \usebox{\pennyla} }; 
+    \node[anchor=north west] at ($(bltl1)+(\boxwidth/2-\hsep,0)$) { \usebox{\pennylb} }; 
+
+    \node[anchor=north west] at (bltl0) { \usebox{\tqla} }; 
+    \node[anchor=north west] at ($(bltl0)+(\boxwidth/2-\hsep,0)$) { \usebox{\tqlb} };
+
+    %% MQO
+    \node[anchor=north west] at (brtl2) { \usebox{\qiskitra} }; 
+    \node[anchor=north west] at ($(brtl2)+(\boxwidth/2-\hsep,0)$) { \usebox{\qiskitrb} }; 
+
+    \node[anchor=north west] at (brtl1) { \usebox{\pennyra} }; 
+    \node[anchor=north west] at ($(brtl1)+(\boxwidth/2-\hsep,0)$) { \usebox{\pennyrb} }; 
+
+    \node[anchor=north west] at (brtl0) { \usebox{\tqra} }; 
+    \node[anchor=north west] at ($(brtl0)+(\boxwidth/2-\hsep,0)$) { \usebox{\tqrb} };
+
+    \tikzset{fwbox/.style={draw=#1, fill=#1, inner sep=0.25pt, fill opacity=0.6}}
+    \node[anchor=south west, fwbox=tfqcol] at (blbl0) { \includegraphics[width=.15\textwidth]{pics/tfq.png} } ; 
+    \node[anchor=south west, fwbox=pennylanecol] at (blbl1) { \includegraphics[width=.15\textwidth]{pics/pennylane.png} } ; 
+    \node[anchor=south west, fwbox=qiskitcol] at (blbl2) { \includegraphics[width=.07\textwidth]{pics/qiskit.png} } ;
+    
+    \node[anchor=south east, fwbox=tfqcol] at (brbr0) { \includegraphics[width=.15\textwidth]{pics/tfq.png} } ; 
+    \node[anchor=south east, fwbox=pennylanecol] at (brbr1) { \includegraphics[width=.15\textwidth]{pics/pennylane.png} } ; 
+    \node[anchor=south east, fwbox=qiskitcol] at (brbr2) { \includegraphics[width=.07\textwidth]{pics/qiskit.png} } ;
+    
+    \newcommand{\createlabel}[5]{\filldraw[loclabel] 
+          ($(#1) + (0, \boxheight/2) - (0,1em)$) --
+          ($(#2)+ (\boxheight/2,0) + (1em,0)$) -- +(-2.5em,0) -- ($(#1) + (0, \boxheight/2) + (0,1.5em)$) -- cycle;
+    \node (#3/texta) at ($(#1) + (0, \boxheight/2)$) {};
+    \node (#3/textb) at ($(#2)+ (\boxheight/2,0)$) {};
+    \node[rotate=45,anchor=center] at ($(#3/texta)!0.5!(#3/textb)$)
+    {\small Q:~#4, C:~#5};}
+    
+    \newcommand{\createlabelright}[5]{\filldraw[loclabel] 
+          ($(#1) + (0, \boxheight/2) - (0,1em)$) --
+          ($(#2) - (\boxheight/2,0) - (1em,0)$) -- +(2.5em,0) -- ($(#1) + (0, \boxheight/2) + (0,1.5em)$) -- cycle;
+    \node (#3/texta) at ($(#1) + (0, \boxheight/2)$) {};
+    \node (#3/textb) at ($(#2) - (\boxheight/2,0)$) {};
+    \node[rotate=-45,anchor=center] at ($(#3/texta)!0.5!(#3/textb)$)
+    {\small Q:~#4, C:~#5};}
+    
+    \createlabel{blbl0}{bltl0}{tfl}{53}{500}
+    \createlabel{blbl1}{bltl1}{pll}{36}{500}
+    \createlabel{blbl2}{bltl2}{pll}{58}{500}
+
+    \createlabelright{brbr0}{brtr0}{tfr}{29}{54}
+    \createlabelright{brbr1}{brtr1}{tfr}{24}{69}
+    \createlabelright{brbr2}{brtr2}{tfr}{8}{25}
+  \end{tikzpicture}

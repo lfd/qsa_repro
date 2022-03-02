@@ -1,0 +1,14 @@
+repository,class,quantum_loc,classic_loc,num_commits
+https://github.com/ycchen1989/Var-QuantumCircuits-DeepRL/tree/982efde0919d5ed365b15ae618b60f219dbee417,ml,1322,103,22
+https://github.com/lockwo/quantum_computation/tree/5802f93c9ef493a15f6d213b9050b344d232e334/variational_quantum_rl,ml,206,0,149
+https://github.com/lockwo/quantum_computation/tree/5802f93c9ef493a15f6d213b9050b344d232e334/TFQ/QAOA,optimization,345,0,149
+https://github.com/lockwo/quantum_computation/blob/5802f93c9ef493a15f6d213b9050b344d232e334/TFQ/RL_QVC/atari_qddqn.py,ml,248,0,149
+https://github.com/lockwo/quantum_computation/blob/5802f93c9ef493a15f6d213b9050b344d232e334/TFQ/RL_QVC/qdqn_paper.py,ml,170,0,149
+https://github.com/lockwo/quantum_computation/blob/5802f93c9ef493a15f6d213b9050b344d232e334/TFQ/RL_QVC/reinforce_vqc.py,ml,249,0,149
+https://github.com/askolik/quantum_agents/tree/78a4c92877f11d8be3848c599c08ba1b984215e8,ml,1794,3495,69
+https://github.com/dwave-examples/portfolio-optimization/tree/bfb7c07a05c255ce31cac733a0eee1095606999e,optimization,458,373,95
+https://github.com/dwave-examples/antenna-selection/tree/6ac67bbd625cf294f2480bddd710332dadf7ee8a,optimization,64,45,84
+https://github.com/dwave-examples/maximum-cut/tree/c2fa91ed53175bcef1dbbaa233d7b268fd353d3c,optimization,176,41,89
+https://github.com/StefanoBarison/quantum_simulation_with_IAO/blob/5f4f1c69e3cec1af8b2a79fa13f24f47532256ca,simulation,114,503,3
+https://github.com/jcopenh/Quantum-Chemistry-with-Annealers/blob/1513b75e6db03add64c94483402fac6226e8c42d/QCC_method.py,simulation,601,0,11
+https://github.com/jcopenh/Quantum-Chemistry-with-Annealers/blob/1513b75e6db03add64c94483402fac6226e8c42d/XBK_method.py,simulation,527,0,11
